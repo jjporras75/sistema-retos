@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Retos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #222; }
+    header { background: #1a73e8; color: #fff; padding: 1rem 2rem; }
+    header h1 { font-size: 1.5rem; }
+    main { max-width: 960px; margin: 2rem auto; padding: 0 1rem; display: grid; gap: 2rem; }
+    section { background: #fff; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    h2 { font-size: 1.1rem; margin-bottom: 1rem; border-bottom: 1px solid #eee; padding-bottom: .5rem; }
+    form { display: flex; flex-direction: column; gap: .6rem; }
+    input, select, textarea { padding: .5rem; border: 1px solid #ccc; border-radius: 4px; font-size: .95rem; }
+    button { padding: .5rem 1rem; background: #1a73e8; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: .95rem; }
+    button:hover { background: #1558b0; }
+    ul { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+    li { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 6px; padding: .75rem; font-size: .9rem; }
+    .badge { display: inline-block; padding: .15rem .5rem; border-radius: 12px; font-size: .75rem; font-weight: 600; }
+    .easy   { background: #d4edda; color: #155724; }
+    .medium { background: #fff3cd; color: #856404; }
+    .hard   { background: #f8d7da; color: #721c24; }
+    .pending  { background: #e2e3e5; color: #383d41; }
+    .accepted { background: #d4edda; color: #155724; }
+    .rejected { background: #f8d7da; color: #721c24; }
+    .empty { color: #888; font-style: italic; font-size: .9rem; }
+    .error { color: #c00; font-size: .85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏆 Sistema de Retos</h1>
+  </header>
+
+  <main>
+    <!-- Create challenge -->
+    <section>
+      <h2>Crear Reto</h2>
+      <form id="formChallenge">
+        <input id="cTitle" type="text" placeholder="Título del reto" required />
+        <textarea id="cDesc" rows="3" placeholder="Descripción" required></textarea>
+        <select id="cDiff">
+          <option value="easy">Fácil</option>
+          <option value="medium" selected>Medio</option>
+          <option value="hard">Difícil</option>
+        </select>
+        <button type="submit">Crear Reto</button>
+        <span class="error" id="errChallenge"></span>
+      </form>
+    </section>
+
+    <!-- List challenges -->
+    <section>
+      <h2>Retos Disponibles <button style="float:right;font-size:.8rem;padding:.3rem .7rem" onclick="loadChallenges()">Actualizar</button></h2>
+      <ul id="challengeList"><li class="empty">Cargando…</li></ul>
+    </section>
+
+    <!-- Create user -->
+    <section>
+      <h2>Registrar Usuario</h2>
+      <form id="formUser">
+        <input id="uName" type="text" placeholder="Nombre del usuario" required />
+        <button type="submit">Registrar</button>
+        <span class="error" id="errUser"></span>
+      </form>
+    </section>
+
+    <!-- Submit answer -->
+    <section>
+      <h2>Enviar Respuesta</h2>
+      <form id="formSubmit">
+        <input id="sUserId" type="number" min="1" placeholder="ID de usuario" required />
+        <input id="sChallengeId" type="number" min="1" placeholder="ID del reto" required />
+        <textarea id="sAnswer" rows="3" placeholder="Tu respuesta" required></textarea>
+        <button type="submit">Enviar</button>
+        <span class="error" id="errSubmit"></span>
+      </form>
+    </section>
+
+    <!-- User submissions -->
+    <section>
+      <h2>Mis Envíos</h2>
+      <form id="formViewSubs" style="flex-direction:row;align-items:center;gap:.5rem">
+        <input id="vsUserId" type="number" min="1" placeholder="ID de usuario" required style="max-width:160px" />
+        <button type="submit">Ver envíos</button>
+      </form>
+      <ul id="subList" style="margin-top:1rem"><li class="empty">–</li></ul>
+    </section>
+  </main>
+
+  <script>
+    const api = (path, opts) =>
+      fetch('/api' + path, { headers: { 'Content-Type': 'application/json' }, ...opts })
+        .then(r => r.json());
+
+    async function loadChallenges() {
+      const list = document.getElementById('challengeList');
+      const data = await api('/challenges');
+      if (!data.length) { list.innerHTML = '<li class="empty">No hay retos aún.</li>'; return; }
+      list.innerHTML = data.map(c => `
+        <li>
+          <strong>#${c.id} ${c.title}</strong>
+          <span class="badge ${c.difficulty}">${c.difficulty}</span>
+          <p style="margin-top:.3rem;color:#555">${c.description}</p>
+        </li>`).join('');
+    }
+
+    document.getElementById('formChallenge').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('errChallenge');
+      err.textContent = '';
+      const res = await api('/challenges', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: document.getElementById('cTitle').value,
+          description: document.getElementById('cDesc').value,
+          difficulty: document.getElementById('cDiff').value,
+        }),
+      });
+      if (res.error) { err.textContent = res.error; return; }
+      e.target.reset();
+      loadChallenges();
+    });
+
+    document.getElementById('formUser').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('errUser');
+      err.textContent = '';
+      const res = await api('/users', {
+        method: 'POST',
+        body: JSON.stringify({ name: document.getElementById('uName').value }),
+      });
+      if (res.error) { err.textContent = res.error; return; }
+      alert(`Usuario creado con ID: ${res.id}`);
+      e.target.reset();
+    });
+
+    document.getElementById('formSubmit').addEventListener('submit', async e => {
+      e.preventDefault();
+      const err = document.getElementById('errSubmit');
+      err.textContent = '';
+      const res = await api(`/users/${document.getElementById('sUserId').value}/submissions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          challengeId: Number(document.getElementById('sChallengeId').value),
+          answer: document.getElementById('sAnswer').value,
+        }),
+      });
+      if (res.error) { err.textContent = res.error; return; }
+      alert(`Envío registrado con ID: ${res.id} (estado: ${res.status})`);
+      e.target.reset();
+    });
+
+    document.getElementById('formViewSubs').addEventListener('submit', async e => {
+      e.preventDefault();
+      const list = document.getElementById('subList');
+      const data = await api(`/users/${document.getElementById('vsUserId').value}/submissions`);
+      if (data.error) { list.innerHTML = `<li class="empty">${data.error}</li>`; return; }
+      if (!data.length) { list.innerHTML = '<li class="empty">Sin envíos.</li>'; return; }
+      list.innerHTML = data.map(s => `
+        <li>
+          Envío #${s.id} — Reto #${s.challengeId}
+          <span class="badge ${s.status}">${s.status}</span>
+          <p style="margin-top:.3rem;color:#555">${s.answer}</p>
+        </li>`).join('');
+    });
+
+    loadChallenges();
+  </script>
+</body>
+</html>

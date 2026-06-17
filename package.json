@@ -1,0 +1,16 @@
+{
+  "name": "sistema-retos",
+  "version": "0.1.0",
+  "description": "Prueba de concepto para el sistema de retos",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test src/__tests__/challenges.test.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
